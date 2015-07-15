@@ -29,58 +29,67 @@ Public
 Import "native/externs.${LANG}"
 
 Private Extern
-Class ExtSQLite3Callback
-End
-
-Class ExtSQLite3Database
-Protected
-	Method Init:Int(filename:String, flags:Int=-1, vfs:String="")
-
-Public
-	Method Close:Int() ' sqlite3_close
-	Method Exec:Int(sql:String, callback:ExtSQLite3Callback=Null) ' sqlite3_exec
-	Method Prepare:ExtSQLite3Statement(sql:String) Abstract
+Class ExtSQLite3Database Abstract
+Private
+	Method _Init:Int(filename:String, flags:Int=-1, vfs:String="")
+	Method _Exec:Int(sql:String)
+	Method _Close:Int()
 End
 
 Class ExtSQLite3Statement
-Protected
-	Method Init:Int(db:ExtSQLite3Database, sql:String)
-
-Public
-	Method Finalize:Void()
-
-	' binding methods
-	Method BindFloat:Int(index:Int, value:Float) ' sqlite3_bind_double
-	Method BindInt:Int(index:Int, value:Int) ' sqlite3_bind_int
-	Method BindString:Int(index:Int, value:String) ' sqllite3_bind_text
-	Method BindNull:Int(index:Int) ' sqlite3_bind_null
-
-	' result methods
-	Method NextRow:Int() ' sqlite3_step
-	Method GetFloat:Float(index:Int) ' sqlite3_column_double
-	Method GetInt:Int(index:Int) ' sqlite3_column_int
-	Method GetString:String(index:Int) ' sqlite3_column_text
-	Method GetType:Int(index:Int) ' sqlite3_column_type
+Private
+	Method _Init:Int(db:ExtSQLite3Database, sql:String)
+	Method _Finalize:Void()
+	Method _BindFloat:Int(index:Int, value:Float)
+	Method _BindInt:Int(index:Int, value:Int)
+	Method _BindString:Int(index:Int, value:String)
+	Method _BindNull:Int(index:Int)
+	Method _NextRow:Int()
+	Method _GetFloat:Float(index:Int)
+	Method _GetInt:Int(index:Int)
+	Method _GetString:String(index:Int)
+	Method _GetType:Int(index:Int)
 End
 
 Public
 Class SQLite3Database Extends ExtSQLite3Database Final
 Public
 	Method New(filename:String="", flags:Int=-1, vfs:String="")
-		Init(filename, flags, vfs)
+		_Init(filename, flags, vfs)
 	End
 
-	Method Prepare:ExtSQLite3Statement(sql:String)
+	Method Prepare:SQLite3Statement(sql:String)
 		Return New SQLite3Statement(Self, sql)
+	End
+
+	Method Close:Int()
+		Return _Close()
+	End
+
+	Method Exec:Int(sql:String)
+		Return _Exec(sql)
 	End
 End
 
 Class SQLite3Statement Extends ExtSQLite3Statement Final
 Private
 	Method New(db:SQLite3Database, sql:String)
-		Init(db, sql)
+		_Init(db, sql)
 	End
-End
 
-Class SQLite3Callback Extends ExtSQLite3Callback
+Public
+	Method Finalize:Void(); _Finalize(); End
+
+	' binding methods
+	Method BindFloat:Int(index:Int, value:Float); Return _BindFloat(index, value); End
+	Method BindInt:Int(index:Int, value:Int); Return _BindInt(index, value); End
+	Method BindString:Int(index:Int, value:String); Return _BindString(index, value); End
+	Method BindNull:Int(index:Int); Return _BindNull(index); End
+
+	' result methods
+	Method NextRow:Int(); Return _NextRow(); End
+	Method GetFloat:Float(index:Int); Return _GetFloat(index); End
+	Method GetInt:Int(index:Int); Return _GetInt(index); End
+	Method GetString:String(index:Int); Return _GetString(index); End
+	Method GetType:Int(index:Int); Return _GetType(index); End
 End

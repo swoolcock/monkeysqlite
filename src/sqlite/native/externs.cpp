@@ -1,4 +1,7 @@
 /*
+MonkeySQLite: Released under zlib license (https://en.wikipedia.org/wiki/Zlib_License)
+SQLite: Released to public domain (https://www.sqlite.org/copyright.html)
+
 Copyright (c) 2015 Shane Woolcock
 
 This software is provided 'as-is', without any express or implied
@@ -20,53 +23,11 @@ freely, subject to the following restrictions:
 
 #include "sqlite3.h"
 
-class ExtSQLite3Callback;
 class ExtSQLite3Database;
 class ExtSQLite3Statement;
 
-class ExtSQLite3Callback : public Object
-{
-/*public:
-	int _columnCount;
-	Array<String> _columnValues;
-	Array<String> _columnNames;
-	// Method Callback:Void(columnCount:Int, columnValues:String[], columnNames:String[])
-	virtual int Callback(int columnCount, Array<String> columnValues, Array<String> columnNames)=0;*/
-};
-
-/*int callbackFunc(void *ptr, int columnCount, char **columnValues, char **columnNames)
-{
-	SQLite3Callback *cb = dynamic_cast<SQLite3Callback *>(ptr);
-	if(cb == NULL) return 0;
-
-	Array<String> valuesArray = new Array<String>(columnCount);
-	Array<String> namesArray = new Array<String>(columnCount);
-	for(int i=0; i<columnCount; i++)
-	{
-		valuesArray[i] = columnValues[i];
-		namesArray[i] = columnNames[i];
-	}
-	cb->Callback(columnCount, columnValues, columnNames);
-}*/
-
 class ExtSQLite3Database : public Object
 {
-protected:
-	int Init(String filename, int flags, String vfs)
-	{
-		int result = 0;
-		if (flags == -1) {
-			result = sqlite3_open(filename.ToCString<char>(), &_db);
-		}
-		else if (vfs.Length()==0) {
-			result = sqlite3_open_v2(filename.ToCString<char>(), &_db, flags, NULL);
-		}
-		else {
-			result = sqlite3_open_v2(filename.ToCString<char>(), &_db, flags, vfs.ToCString<char>());
-		}
-		return result;
-	}
-
 public:
 	sqlite3 *_db;
 	int _flags;
@@ -83,41 +44,44 @@ public:
 			sqlite3_close_v2(_db);
 		// TODO: something with result
 	}
-	
-	/////// Common Methods ///////
+
+	int _Init(String filename, int flags, String vfs)
+	{
+		int result = 0;
+		if (flags == -1) {
+			result = sqlite3_open(filename.ToCString<char>(), &_db);
+		}
+		else if (vfs.Length()==0) {
+			result = sqlite3_open_v2(filename.ToCString<char>(), &_db, flags, NULL);
+		}
+		else {
+			result = sqlite3_open_v2(filename.ToCString<char>(), &_db, flags, vfs.ToCString<char>());
+		}
+		return result;
+	}
+
+	// Method Exec:Int(sql:String)
+	int _Exec(String sql)
+	{
+		return sqlite3_exec(_db, sql.ToCString<char>(), NULL, NULL, NULL);
+	}
 
 	// Method Close:Int()
-	int Close()
+	int _Close()
 	{
 		if(_closed) return 0;
 		_closed = true;
 		return sqlite3_close_v2(_db);
 	}
-
-	// Method Prepare:ExtSQLite3Statement(sql:String)
-	virtual ExtSQLite3Statement *Prepare(String sql)=0;
-
-	// Method Exec:Int(sql:String, callback:SQLite3Callback=Null)
-	int Exec(String sql, ExtSQLite3Callback *callback)
-	{
-		return sqlite3_exec(_db, sql.ToCString<char>(), NULL, NULL, NULL);
-	}
 };
 
 class ExtSQLite3Statement : public Object
 {
-protected:
-	int Init(ExtSQLite3Database *db, String sql)
-	{
-		return sqlite3_prepare_v2(db->_db, sql.ToCString<char>(), -1, &_stmt, NULL);
-	}
-
 public:
 	bool _finalized;
 	sqlite3_stmt *_stmt;
 
 	ExtSQLite3Statement() : _stmt(NULL), _finalized(false) {}
-
 	~ExtSQLite3Statement()
 	{
 		// make sure the statement is finalized
@@ -127,8 +91,13 @@ public:
 		// TODO: something with result
 	}
 
+	int _Init(ExtSQLite3Database *db, String sql)
+	{
+		return sqlite3_prepare_v2(db->_db, sql.ToCString<char>(), -1, &_stmt, NULL);
+	}
+
 	// Method Finalize:Void()
-	int Finalize()
+	int _Finalize()
 	{
 		if(_finalized) return 0;
 		_finalized = true;
@@ -136,49 +105,49 @@ public:
 	}
 
 	// Method BindFloat:Int(index:Int, value:Float)
-	int BindFloat(int index, float value)
+	int _BindFloat(int index, float value)
 	{
 		return sqlite3_bind_double(_stmt, index, (double)value);
 	}
 
 	// Method BindInt:Int(index:Int, value:Int)
-	int BindInt(int index, int value)
+	int _BindInt(int index, int value)
 	{
 		return sqlite3_bind_int(_stmt, index, value);
 	}
 
 	// Method BindString:Int(index:Int, value:String)
-	int BindString(int index, String value)
+	int _BindString(int index, String value)
 	{
 		return sqlite3_bind_text(_stmt, index, value.ToCString<char>(), -1, SQLITE_TRANSIENT);
 	}
 
 	// Method BindNull:Int(index:Int)
-	int BindNull(int index)
+	int _BindNull(int index)
 	{
 		return sqlite3_bind_null(_stmt, index);
 	}
 
 	// Method NextRow:Int()
-	int NextRow()
+	int _NextRow()
 	{
 		return sqlite3_step(_stmt);
 	}
 
 	// Method GetFloat:Float(index:Int)
-	float GetFloat(int index)
+	float _GetFloat(int index)
 	{
 		return (float)sqlite3_column_double(_stmt, index);
 	}
 
 	// Method GetInt:Int(index:Int)
-	int GetInt(int index)
+	int _GetInt(int index)
 	{
 		return sqlite3_column_int(_stmt, index);
 	}
 
 	// Method GetString:String(index:Int)
-	String GetString(int index)
+	String _GetString(int index)
 	{
 		const unsigned char *val = sqlite3_column_text(_stmt, index);
 		if(val==NULL) return String("");
@@ -186,7 +155,7 @@ public:
 	}
 
 	// Method GetType:Int(index:Int)
-	int GetType(int index)
+	int _GetType(int index)
 	{
 		return sqlite3_column_type(_stmt, index);
 	}
