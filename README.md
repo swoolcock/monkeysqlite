@@ -4,6 +4,7 @@ SQLite3 bindings for the Monkey-X programming language.
 http://www.monkey-x.com/
 
 Simple example that creates a table, inserts some rows, and runs a query:
+
     Import sqlite
     
     Function Main()
