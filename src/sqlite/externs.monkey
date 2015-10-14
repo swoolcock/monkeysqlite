@@ -26,7 +26,11 @@ Strict
 Public
 
 ' import extern wrapper
+#If LANG="cpp" Then
 Import "native/externs.${LANG}"
+#Else
+Import "native/externs.${TARGET}.${LANG}"
+#End
 
 Private Extern
 Class ExtSQLite3Database Abstract
